@@ -5,6 +5,7 @@ import type { Article } from "@/lib/fetchFeeds";
 import { matchTools } from "@/lib/matchTools";
 import { resolveRecommendation, type Recommendation } from "@/lib/resolveRecommendation";
 import ToolCard, { type NewsMention } from "@/components/ToolCard";
+import CheatSheet from "@/components/CheatSheet";
 
 const EXAMPLE_PROMPTS = [
   "I need to write and polish a cover letter",
@@ -23,6 +24,7 @@ export default function HomePage() {
   const [status, setStatus] = useState<Status>("idle");
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [cheatSheetOpen, setCheatSheetOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -109,14 +111,22 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <main className="mx-auto max-w-3xl px-4 sm:px-8 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-            Find the best AI for it
-          </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Describe what you&apos;re trying to do. Gemini reasons about your specific
-            situation and picks the best current tool for it.
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+              Find the best AI for it
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              Describe what you&apos;re trying to do. Gemini reasons about your specific
+              situation and picks the best current tool for it.
+            </p>
+          </div>
+          <button
+            onClick={() => setCheatSheetOpen(true)}
+            className="shrink-0 self-start rounded-lg border border-black/10 dark:border-white/15 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 transition"
+          >
+            Cheat sheet
+          </button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 items-stretch">
@@ -188,6 +198,8 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {cheatSheetOpen && <CheatSheet onClose={() => setCheatSheetOpen(false)} />}
     </div>
   );
 }

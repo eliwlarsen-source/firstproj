@@ -6,32 +6,32 @@ import {
   modelsByProvider,
   topOfLineup,
   providerOrder,
+  providerColors,
   PRICING_AS_OF,
   PRICING_SOURCES,
   type ModelPrice,
   type Provider,
 } from "@/lib/modelPricing";
 
-// Provider identity colors live here as CSS custom properties so the same
-// token drives the cards, the chart bars, and the table dots, and so the
-// dark steps swap with the OS theme (this app has no manual theme toggle).
+// Provider identity colors become CSS custom properties so one token drives
+// the cards, the chart bars, and the table dots, and the dark steps swap with
+// the OS theme (this app has no manual theme toggle). Sourced from the data
+// module so the validated hexes are defined in exactly one place.
 const PALETTE_CSS = `
 .cheatsheet {
-  --p-anthropic: #eb6834;
-  --p-openai: #1baf7a;
-  --p-google: #2a78d6;
-  --p-xai: #eda100;
+  --p-anthropic: ${providerColors.Anthropic.light};
+  --p-openai: ${providerColors.OpenAI.light};
+  --p-google: ${providerColors.Google.light};
+  --p-xai: ${providerColors.xAI.light};
   --cs-surface: #ffffff;
-  --cs-plane: #f7f7f5;
 }
 @media (prefers-color-scheme: dark) {
   .cheatsheet {
-    --p-anthropic: #d95926;
-    --p-openai: #199e70;
-    --p-google: #3987e5;
-    --p-xai: #c98500;
+    --p-anthropic: ${providerColors.Anthropic.dark};
+    --p-openai: ${providerColors.OpenAI.dark};
+    --p-google: ${providerColors.Google.dark};
+    --p-xai: ${providerColors.xAI.dark};
     --cs-surface: #141413;
-    --cs-plane: #0d0d0d;
   }
 }
 `;

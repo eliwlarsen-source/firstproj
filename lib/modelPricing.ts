@@ -267,17 +267,6 @@ export const modelPrices: ModelPrice[] = [
   },
 ];
 
-export function estimateCost(
-  model: ModelPrice,
-  inputTokens: number,
-  outputTokens: number
-): number {
-  return (
-    (inputTokens / 1_000_000) * model.inputPerMTok +
-    (outputTokens / 1_000_000) * model.outputPerMTok
-  );
-}
-
 export function modelsByProvider(provider: Provider): ModelPrice[] {
   return modelPrices.filter((m) => m.provider === provider);
 }
