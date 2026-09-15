@@ -12,7 +12,7 @@ interface ToolCardProps {
 }
 
 export default function ToolCard({ match, rank, newsMention }: ToolCardProps) {
-  const { tool, matchedKeywords } = match;
+  const { tool, reason } = match;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] p-5">
@@ -53,18 +53,12 @@ export default function ToolCard({ match, rank, newsMention }: ToolCardProps) {
         {tool.bestFor}
       </p>
 
-      {matchedKeywords.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-1">
-          {matchedKeywords.slice(0, 4).map((kw) => (
-            <span
-              key={kw}
-              className="rounded-full bg-black/5 dark:bg-white/10 px-2 py-0.5 text-[11px] text-neutral-600 dark:text-neutral-300"
-            >
-              {kw}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-2">
+        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-0.5">
+          Why this pick
+        </p>
+        <p className="text-sm text-neutral-700 dark:text-neutral-300">{reason}</p>
+      </div>
     </div>
   );
 }

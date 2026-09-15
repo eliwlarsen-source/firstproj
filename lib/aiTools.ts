@@ -38,7 +38,7 @@ export const aiTools: AiTool[] = [
     bestFor: "General Q&A, brainstorming, everyday tasks, quick image generation",
     keywords: [
       "brainstorm", "idea", "ideas", "general question", "explain", "learn",
-      "homework", "study", "quick answer", "voice",
+      "homework", "study", "quick answer",
     ],
   },
   {
