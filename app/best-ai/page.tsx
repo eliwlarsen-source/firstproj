@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Article } from "@/lib/fetchFeeds";
 import { matchTools } from "@/lib/matchTools";
+import { resolveRecommendation, type Recommendation } from "@/lib/resolveRecommendation";
 import ToolCard, { type NewsMention } from "@/components/ToolCard";
 
 const EXAMPLE_PROMPTS = [
@@ -15,9 +16,14 @@ const EXAMPLE_PROMPTS = [
   "Get meeting notes and action items from a Zoom call",
 ];
 
+type Status = "idle" | "loading" | "done" | "error";
+
 export default function BestAiPage() {
   const [input, setInput] = useState("");
   const [articles, setArticles] = useState<Article[]>([]);
+  const [status, setStatus] = useState<Status>("idle");
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [usedFallback, setUsedFallback] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,32 +41,71 @@ export default function BestAiPage() {
     };
   }, []);
 
-  const matches = useMemo(() => matchTools(input), [input]);
+  function fallbackToLocalMatch(query: string) {
+    const matches = matchTools(query);
+    setRecommendations(
+      matches.map((m) => ({
+        name: m.tool.name,
+        url: m.tool.url,
+        category: m.tool.category,
+        description: m.tool.description,
+        bestFor: m.tool.bestFor,
+        reason: m.reason,
+        inCuratedList: true,
+      }))
+    );
+    setUsedFallback(true);
+    setStatus("done");
+  }
 
-  const newsMentions = useMemo(() => {
-    const map = new Map<string, NewsMention>();
-    for (const match of matches) {
-      const nameLower = match.tool.name.toLowerCase();
-      const hit = articles.find((a) => a.title.toLowerCase().includes(nameLower));
-      if (hit) map.set(match.tool.name, { title: hit.title, link: hit.link });
+  async function runSearch() {
+    const query = input.trim();
+    if (!query) return;
+
+    setStatus("loading");
+    setUsedFallback(false);
+
+    try {
+      const res = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
+
+      const data: {
+        primary: { name: string; reason: string };
+        alternatives: { name: string; reason: string }[];
+      } = await res.json();
+
+      const all = [data.primary, ...data.alternatives];
+      setRecommendations(all.map((r) => resolveRecommendation(r.name, r.reason)));
+      setStatus("done");
+    } catch {
+      fallbackToLocalMatch(query);
     }
-    return map;
-  }, [matches, articles]);
 
-  const hasStrongMatch = matches.length > 0 && matches[0].score > 0;
-
-  function scrollToResults() {
-    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // Enter searches (matches the "search box" mental model); Shift+Enter
-    // still inserts a newline for a longer description.
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      scrollToResults();
+      runSearch();
     }
   }
+
+  const newsMentions = useMemo(() => {
+    const map = new Map<string, NewsMention>();
+    for (const rec of recommendations) {
+      const nameLower = rec.name.toLowerCase();
+      const hit = articles.find((a) => a.title.toLowerCase().includes(nameLower));
+      if (hit) map.set(rec.name, { title: hit.title, link: hit.link });
+    }
+    return map;
+  }, [recommendations, articles]);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
@@ -76,8 +121,8 @@ export default function BestAiPage() {
             Find the best AI for it
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Describe what you&apos;re trying to do and get a matched recommendation from a
-            curated, hand-maintained list of current AI tools.
+            Describe what you&apos;re trying to do. Gemini reasons about your specific
+            situation and picks the best current tool for it.
           </p>
         </div>
 
@@ -91,23 +136,25 @@ export default function BestAiPage() {
             className="flex-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/[0.03] px-4 py-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 outline-none focus:border-neutral-400 dark:focus:border-neutral-500 transition resize-none"
           />
           <button
-            onClick={scrollToResults}
-            disabled={input.trim() === ""}
+            onClick={runSearch}
+            disabled={input.trim() === "" || status === "loading"}
             className="shrink-0 rounded-lg bg-neutral-900 dark:bg-neutral-100 px-5 py-2 text-sm font-medium text-white dark:text-neutral-900 hover:opacity-90 disabled:opacity-40 transition sm:self-stretch"
           >
-            Search
+            {status === "loading" ? "Thinking…" : "Search"}
           </button>
         </div>
 
-        {input.trim() !== "" && (
+        {status !== "idle" && (
           <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-            {hasStrongMatch
-              ? `${matches.length} match${matches.length === 1 ? "" : "es"} found`
-              : "No specific match — showing general picks below"}
+            {status === "loading" && "Asking Gemini what's actually best for this…"}
+            {status === "done" && !usedFallback && "Recommendation from Gemini"}
+            {status === "done" &&
+              usedFallback &&
+              "Gemini's unavailable right now — showing curated matches instead"}
           </p>
         )}
 
-        {input.trim() === "" && (
+        {status === "idle" && (
           <div className="mt-4">
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">Try one:</p>
             <div className="flex flex-wrap gap-2">
@@ -124,14 +171,25 @@ export default function BestAiPage() {
           </div>
         )}
 
-        {input.trim() !== "" && (
+        {status === "loading" && (
+          <div className="mt-6 flex flex-col gap-4">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-36 animate-pulse rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.03]"
+              />
+            ))}
+          </div>
+        )}
+
+        {status === "done" && (
           <div ref={resultsRef} className="mt-6 flex flex-col gap-4 scroll-mt-6">
-            {matches.map((match, i) => (
+            {recommendations.map((rec, i) => (
               <ToolCard
-                key={match.tool.name}
-                match={match}
+                key={`${rec.name}-${i}`}
+                recommendation={rec}
                 rank={i + 1}
-                newsMention={newsMentions.get(match.tool.name)}
+                newsMention={newsMentions.get(rec.name)}
               />
             ))}
           </div>

@@ -1,4 +1,4 @@
-import type { ToolMatch } from "@/lib/matchTools";
+import type { Recommendation } from "@/lib/resolveRecommendation";
 
 export interface NewsMention {
   title: string;
@@ -6,13 +6,13 @@ export interface NewsMention {
 }
 
 interface ToolCardProps {
-  match: ToolMatch;
+  recommendation: Recommendation;
   rank: number;
   newsMention?: NewsMention;
 }
 
-export default function ToolCard({ match, rank, newsMention }: ToolCardProps) {
-  const { tool, reason } = match;
+export default function ToolCard({ recommendation, rank, newsMention }: ToolCardProps) {
+  const { name, url, category, description, bestFor, reason, inCuratedList } = recommendation;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] p-5">
@@ -23,14 +23,16 @@ export default function ToolCard({ match, rank, newsMention }: ToolCardProps) {
           </span>
           <div>
             <a
-              href={tool.url}
+              href={url}
               target="_blank"
               rel="noopener noreferrer"
               className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 hover:underline"
             >
-              {tool.name}
+              {name}
             </a>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">{tool.category}</p>
+            {category && (
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">{category}</p>
+            )}
           </div>
         </div>
         {newsMention && (
@@ -46,12 +48,16 @@ export default function ToolCard({ match, rank, newsMention }: ToolCardProps) {
         )}
       </div>
 
-      <p className="text-sm text-neutral-700 dark:text-neutral-300">{tool.description}</p>
+      {description && (
+        <p className="text-sm text-neutral-700 dark:text-neutral-300">{description}</p>
+      )}
 
-      <p className="text-sm text-neutral-500 dark:text-neutral-400">
-        <span className="font-medium text-neutral-600 dark:text-neutral-300">Best for: </span>
-        {tool.bestFor}
-      </p>
+      {bestFor && (
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <span className="font-medium text-neutral-600 dark:text-neutral-300">Best for: </span>
+          {bestFor}
+        </p>
+      )}
 
       <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-2">
         <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-0.5">
@@ -59,6 +65,12 @@ export default function ToolCard({ match, rank, newsMention }: ToolCardProps) {
         </p>
         <p className="text-sm text-neutral-700 dark:text-neutral-300">{reason}</p>
       </div>
+
+      {!inCuratedList && (
+        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+          Not in our curated list — link goes to a search instead of a direct site.
+        </p>
+      )}
     </div>
   );
 }

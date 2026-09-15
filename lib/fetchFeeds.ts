@@ -68,3 +68,19 @@ export async function fetchFeeds(): Promise<Article[]> {
 
   return deduped;
 }
+
+const CACHE_TTL_MS = 10 * 60 * 1000;
+
+let cache: { articles: Article[]; fetchedAt: number } | null = null;
+
+// Shared cache so any route that needs recent articles (the news feed,
+// the Gemini recommender's freshness grounding, etc.) hits the RSS
+// sources at most once every CACHE_TTL_MS instead of duplicating fetches.
+export async function getCachedArticles(force = false): Promise<{ articles: Article[]; fetchedAt: number }> {
+  const now = Date.now();
+  if (!cache || force || now - cache.fetchedAt > CACHE_TTL_MS) {
+    const articles = await fetchFeeds();
+    cache = { articles, fetchedAt: now };
+  }
+  return cache;
+}
