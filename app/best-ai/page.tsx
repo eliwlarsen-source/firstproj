@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Article } from "@/lib/fetchFeeds";
 import { matchTools } from "@/lib/matchTools";
@@ -18,6 +18,7 @@ const EXAMPLE_PROMPTS = [
 export default function BestAiPage() {
   const [input, setInput] = useState("");
   const [articles, setArticles] = useState<Article[]>([]);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +49,19 @@ export default function BestAiPage() {
 
   const hasStrongMatch = matches.length > 0 && matches[0].score > 0;
 
+  function scrollToResults() {
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter searches (matches the "search box" mental model); Shift+Enter
+    // still inserts a newline for a longer description.
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      scrollToResults();
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <main className="mx-auto max-w-3xl px-4 sm:px-8 py-10">
@@ -67,13 +81,31 @@ export default function BestAiPage() {
           </p>
         </div>
 
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          rows={3}
-          placeholder="e.g. I need to generate a short video for a product launch…"
-          className="w-full rounded-lg border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/[0.03] px-4 py-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 outline-none focus:border-neutral-400 dark:focus:border-neutral-500 transition resize-none"
-        />
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleTextareaKeyDown}
+            rows={3}
+            placeholder="e.g. I need to generate a short video for a product launch…"
+            className="flex-1 rounded-lg border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/[0.03] px-4 py-3 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 outline-none focus:border-neutral-400 dark:focus:border-neutral-500 transition resize-none"
+          />
+          <button
+            onClick={scrollToResults}
+            disabled={input.trim() === ""}
+            className="shrink-0 rounded-lg bg-neutral-900 dark:bg-neutral-100 px-5 py-2 text-sm font-medium text-white dark:text-neutral-900 hover:opacity-90 disabled:opacity-40 transition sm:self-stretch"
+          >
+            Search
+          </button>
+        </div>
+
+        {input.trim() !== "" && (
+          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            {hasStrongMatch
+              ? `${matches.length} match${matches.length === 1 ? "" : "es"} found`
+              : "No specific match — showing general picks below"}
+          </p>
+        )}
 
         {input.trim() === "" && (
           <div className="mt-4">
@@ -93,13 +125,7 @@ export default function BestAiPage() {
         )}
 
         {input.trim() !== "" && (
-          <div className="mt-6 flex flex-col gap-4">
-            {!hasStrongMatch && (
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                No specific match found in the list — here are strong general-purpose picks
-                instead.
-              </p>
-            )}
+          <div ref={resultsRef} className="mt-6 flex flex-col gap-4 scroll-mt-6">
             {matches.map((match, i) => (
               <ToolCard
                 key={match.tool.name}
