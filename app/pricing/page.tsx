@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import {
   modelPrices,
   estimateCost,
+  providerColors,
   PRICING_AS_OF,
   PRICING_SOURCES,
   type ModelPrice,
 } from "@/lib/modelPricing";
+import CheatSheet from "@/components/CheatSheet";
 
 const PRESETS = [
   { label: "A short chat", input: 1_000, output: 500 },
@@ -15,10 +17,28 @@ const PRESETS = [
   { label: "1M in / 100K out", input: 1_000_000, output: 100_000 },
 ];
 
-const providerColors: Record<string, string> = {
-  Anthropic: "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30",
-  OpenAI: "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
-  Google: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+const PROVIDER_CSS = `
+.pricing-table {
+  --p-anthropic: ${providerColors.Anthropic.light};
+  --p-openai: ${providerColors.OpenAI.light};
+  --p-google: ${providerColors.Google.light};
+  --p-xai: ${providerColors.xAI.light};
+}
+@media (prefers-color-scheme: dark) {
+  .pricing-table {
+    --p-anthropic: ${providerColors.Anthropic.dark};
+    --p-openai: ${providerColors.OpenAI.dark};
+    --p-google: ${providerColors.Google.dark};
+    --p-xai: ${providerColors.xAI.dark};
+  }
+}
+`;
+
+const providerVar: Record<string, string> = {
+  Anthropic: "var(--p-anthropic)",
+  OpenAI: "var(--p-openai)",
+  Google: "var(--p-google)",
+  xAI: "var(--p-xai)",
 };
 
 function formatCost(cost: number): string {
@@ -35,6 +55,7 @@ function formatRate(rate: number): string {
 export default function PricingPage() {
   const [inputTokens, setInputTokens] = useState(100_000);
   const [outputTokens, setOutputTokens] = useState(2_000);
+  const [cheatSheetOpen, setCheatSheetOpen] = useState(false);
 
   const rows = useMemo(() => {
     return modelPrices
@@ -50,14 +71,22 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <main className="mx-auto max-w-4xl px-4 sm:px-8 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-            Token pricing by model
-          </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            What each model costs per million tokens, and what your workload would cost on
-            each one.
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+              Token pricing by model
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              What each model costs per million tokens, and what your workload would cost on
+              each one.
+            </p>
+          </div>
+          <button
+            onClick={() => setCheatSheetOpen(true)}
+            className="shrink-0 self-start rounded-lg bg-neutral-900 dark:bg-neutral-100 px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 hover:opacity-90 transition"
+          >
+            Cheat sheet
+          </button>
         </div>
 
         <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] p-5 mb-6">
@@ -110,7 +139,8 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-black/10 dark:border-white/10">
+        <style>{PROVIDER_CSS}</style>
+        <div className="pricing-table overflow-x-auto rounded-xl border border-black/10 dark:border-white/10">
           <table className="w-full text-sm">
             <thead className="bg-black/[0.03] dark:bg-white/[0.04]">
               <tr className="text-left text-xs text-neutral-500 dark:text-neutral-400">
@@ -156,6 +186,8 @@ export default function PricingPage() {
           </p>
         </div>
       </main>
+
+      {cheatSheetOpen && <CheatSheet onClose={() => setCheatSheetOpen(false)} />}
     </div>
   );
 }
@@ -169,18 +201,19 @@ function PricingRow({
   cost: number;
   isCheapest: boolean;
 }) {
-  const badgeClass =
-    providerColors[model.provider] ??
-    "bg-neutral-500/15 text-neutral-600 dark:text-neutral-300 border-neutral-500/30";
-
   return (
     <tr className="border-t border-black/5 dark:border-white/5">
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: providerVar[model.provider] }}
+          />
           <span className="font-medium text-neutral-900 dark:text-neutral-100">
             {model.name}
           </span>
-          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${badgeClass}`}>
+          <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
             {model.provider}
           </span>
         </div>
@@ -196,8 +229,8 @@ function PricingRow({
       <td className="px-4 py-3 text-right tabular-nums text-neutral-600 dark:text-neutral-300">
         {formatRate(model.outputPerMTok)}
       </td>
-      <td className="px-4 py-3 text-right text-neutral-500 dark:text-neutral-400">
-        {model.contextWindow ?? "—"}
+      <td className="px-4 py-3 text-right tabular-nums text-neutral-500 dark:text-neutral-400">
+        {model.contextLabel}
       </td>
       <td className="px-4 py-3 text-right">
         <span
