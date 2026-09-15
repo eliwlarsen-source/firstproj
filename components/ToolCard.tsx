@@ -66,11 +66,23 @@ export default function ToolCard({ recommendation, rank, newsMention }: ToolCard
         <p className="text-sm text-neutral-700 dark:text-neutral-300">{reason}</p>
       </div>
 
-      {!inCuratedList && (
-        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-          Not in our curated list — link goes to a search instead of a direct site.
-        </p>
-      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-black/10 dark:border-white/15 px-3 py-1.5 text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 transition"
+        >
+          {inCuratedList ? `Go to ${name}` : `Search for ${name}`}
+          <span aria-hidden="true">→</span>
+        </a>
+        {!inCuratedList && (
+          <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+            Not in our curated list, so this links to a search rather than a site we&apos;ve
+            verified.
+          </span>
+        )}
+      </div>
     </div>
   );
 }
